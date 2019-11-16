@@ -1,5 +1,101 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd"></mule>
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="87e2d15c-7958-40b4-9d9c-835e398a5a8c" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="cae4b3db-bf62-4e16-8b06-672dfb651e7b" >
+		<http:request-connection host="api.meteostat.net" protocol="HTTPS"/>
+	</http:request-config>
+	<flow name="sunain_assessment_2Flow" doc:id="413ffb21-304d-4056-a7a2-85134c10b3b8" >
+		<http:listener doc:name="Listener" doc:id="47758488-effb-4e79-b2a7-6e45f520e0dd" config-ref="HTTP_Listener_config" path="/doc"/>
+		<logger level="INFO" doc:name="Logger" doc:id="571acfed-0628-4107-9855-a5afd9996865" />
+		<http:request method="GET" doc:name="Request" doc:id="16286822-6187-45a5-b626-198fd7871b07" config-ref="HTTP_Request_configuration" path="/v1/history/monthly" sendCorrelationId="NEVER">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"start" : "2009-01",
+	"key" : "gW38q3vg",
+	"end" : "2009-12",
+	"station" : "71964"
+}]]]></http:query-params>
+		</http:request>
+		<logger level="INFO" doc:name="Logger" doc:id="7143c2c4-510a-4736-a0b6-ab67d23e8d3c" />
+	</flow>
+	<flow name="sunain_assessment_2Flow1" doc:id="765c8db4-5ef5-4864-adde-24f107f6bbc9" >
+		<http:listener doc:name="Listener" doc:id="359b83ac-1570-4206-b73f-b36696c29595" config-ref="HTTP_Listener_config" path="/step1" allowedMethods="GET"/>
+		<set-variable value="#[attributes.queryParams.month]" doc:name="Set month" doc:id="831a7198-a5a5-4636-8cfc-d2c54ff75c84" variableName="month" />
+		<flow-ref doc:name="Flow Reference" doc:id="08687774-445d-469c-914b-a87549ed9972" name="sunain_assessment_2Flow"/>
+		<logger level="INFO" doc:name="Logger" doc:id="d4b7a9af-eb1c-4db8-88f9-dd0cfd0ded78" />
+		<ee:transform doc:name="Transform Message" doc:id="b304bbf6-3ae7-4403-9a4d-099937991956" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{"max temp for month is":payload."data"[vars.month as Number -1]."temperature_max"}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="c0435676-b7ba-42ba-8e4a-e53eb4d8d7dc" />
+	</flow>
+	<flow name="sunain_assessment_2Flow2" doc:id="b846d740-b4ea-4f35-8076-745f939b7e99" >
+		<http:listener doc:name="Listener" doc:id="6c1affa1-4098-4d76-80e5-f009d969d73a" config-ref="HTTP_Listener_config" path="/step2"/>
+		<flow-ref doc:name="Flow Reference" doc:id="28aa53fd-f427-439c-ac70-2139416feb8a" name="sunain_assessment_2Flow" />
+		<logger level="INFO" doc:name="Logger" doc:id="b3d94cf1-d8c3-4cb7-9433-ee953068fbbb" />
+		<ee:transform doc:name="Transform Message" doc:id="095c16a1-a3b3-4527-ac24-09769afb6ba0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{"Avg ppt per month":payload."data" map(value,key)->
+	{
+		"month":key+1,
+		"ppt_avg":value."precipitation"
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="ac5c7607-a23c-40e7-81c9-b66d5f9798ad" />
+	</flow>
+	<flow name="sunain_assessment_2Flow3" doc:id="136619bb-728f-448a-ba39-64351ff7799e" >
+		<http:listener doc:name="Listener" doc:id="00023c46-0492-4603-a383-f05fc1aefc06" config-ref="HTTP_Listener_config" path="/step3"/>
+		<logger level="INFO" doc:name="Logger" doc:id="91469ae5-6fcb-4336-9cd7-62721ea85997" />
+		<http:request method="GET" doc:name="Request" doc:id="3df22685-ab62-4422-9dda-cf7af64d783e" config-ref="HTTP_Request_configuration" path="/v1/history/daily" sendCorrelationId="NEVER">
+			<http:query-params><![CDATA[#[output application/java
+---
+{
+	"start" : "2017-01-01",
+	"key" : "gW38q3vg",
+	"end" : "2017-12-31",
+	"station" : "10637"
+}]]]></http:query-params>
+		</http:request>
+		<logger level="INFO" doc:name="Logger" doc:id="e19dfd25-1b3b-49f5-b195-fecb698b62c1" />
+		<ee:transform doc:name="Transform Message" doc:id="89e15d3f-6945-4bf3-ba2d-3bf97ef4e0d1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload."data"."temperature_min"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="464a383b-8179-4163-aaa2-b7df79da56ff" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+---
+{
+	"lowest temp per week":payload map(value,key)->
+	{
+		"week": key/7 as Number,
+		"temp": value
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
