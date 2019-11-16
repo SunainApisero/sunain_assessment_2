@@ -79,7 +79,7 @@ output application/json
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
 ---
-payload."data"."temperature_min"]]></ee:set-payload>
+payload."data"]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 		<ee:transform doc:name="Transform Message" doc:id="464a383b-8179-4163-aaa2-b7df79da56ff" >
@@ -91,8 +91,8 @@ output application/json
 {
 	"lowest temp per week":payload map(value,key)->
 	{
-		"week": key/7 as Number,
-		"temp": value
+		"weekInYear-w" : (key/7) as Number,
+		"temperature" : value."temperature_min"
 	}
 }]]></ee:set-payload>
 			</ee:message>
